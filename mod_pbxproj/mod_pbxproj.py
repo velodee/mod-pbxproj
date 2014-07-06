@@ -552,13 +552,13 @@ class XCBuildConfiguration(PBXType):
         modified = False
         base = 'buildSettings'
         key = flag
-         
+
         if not self.has_key(base):
             self[base] = PBXDict()
         if self[base].has_key(key):
             if self[base][key] == value:
                 return False
-        self[base][key] = value                             
+        self[base][key] = value
         modified = True
         return modified
 
@@ -567,11 +567,26 @@ class XCBuildConfiguration(PBXType):
         modified = False
         base = 'buildSettings'
         key = flag
-         
+
         if self.has_key(base) and self[base].has_key(key):
-            self[base].pop(key, None)                            
+            self[base].pop(key, None)
             modified = True
         return modified
+
+    def set_debug_information_format(self, flag):
+        modified = False
+
+        base = 'buildSettings'
+        key = 'DEBUG_INFORMATION_FORMAT'
+
+        if base not in self:
+            self[base] = PBXDict()
+
+        self[base][key] = flag
+        modified = True
+
+        return modified
+
 
 class XCConfigurationList(PBXType):
     pass
@@ -629,6 +644,13 @@ class XcodeProject(PBXDict):
             if b.remove_other_ldflags(flags):
                 self.modified = True
 
+    def set_debug_information_format(self, flag='dwarf-with-dsym'):
+        build_configs = [b for b in self.objects.values() if b.get('isa') == 'XCBuildConfiguration']
+
+        for b in build_configs:
+            if b.set_debug_information_format('dwarf-with-dsym' if flag not in ['dwarf-with-dsym', 'dwarf'] else flag):
+                self.modified = True
+
     def add_header_search_paths(self, paths, recursive=True):
         build_configs = [b for b in self.objects.values() if b.get('isa') == 'XCBuildConfiguration']
 
@@ -676,7 +698,7 @@ class XcodeProject(PBXDict):
     # Set a single-valued flag (whereas add_flags adds a flag to a list of flags with a given key)
     def add_single_valued_flag(self, flag, value, configuration='All'):
         build_configs = [b for b in self.objects.values() if b.get('isa') == 'XCBuildConfiguration']
-        
+
         for b in build_configs:
             if configuration != "All" and b.get('name') != configuration :
                 continue
@@ -687,7 +709,7 @@ class XcodeProject(PBXDict):
     # Remove a single-valued flag (whereas remove_flags deletes a flag from a list of flags with a given key)
     def remove_single_valued_flag(self, flag, configuration='All'):
         build_configs = [b for b in self.objects.values() if b.get('isa') == 'XCBuildConfiguration']
-        
+
         for b in build_configs:
             if configuration != "All" and b.get('name') != configuration :
                 continue
@@ -718,12 +740,12 @@ class XcodeProject(PBXDict):
                                                          and f.get('name') == name]
 
         return files
-    
+
     def get_keys_for_files_by_name(self, name):
         keys = [key for key in self.objects if self.objects.data[key].get('name') == name
                                                 and self.objects.data[key].get('isa') == 'PBXFileReference']
         return keys
-    
+
 
     def get_build_files(self, id):
         files = [f for f in self.objects.values() if f.get('isa') == 'PBXBuildFile'
@@ -1260,7 +1282,7 @@ class XcodeProject(PBXDict):
             self.save_format_xml(file_name)
         else:
             self.save_new_format(file_name, sort)
-    
+
     def save_format_xml(self, file_name=None):
         """Saves in old (xml) format"""
         if not file_name:
@@ -1487,14 +1509,14 @@ class XcodeProject(PBXDict):
                 return None
 
             tree = plistlib.readPlistFromString(stdout)
-            
+
         return XcodeProject(tree, path)
 
     @classmethod
     def LoadFromXML(cls, path):
         tree = plistlib.readPlist(path)
         return XcodeProject(tree, path)
-        
+
 
 # The code below was adapted from plistlib.py.
 
